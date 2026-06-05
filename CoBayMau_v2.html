@@ -534,7 +534,7 @@ function _doAttFlow(sid){
     showMdl('Thu học phí khoá '+(s.khoa+1),`
       <p style="margin-bottom:12px;color:var(--text2)"><b style="color:var(--text)">${s.name}</b> đã hoàn thành khoá ${s.khoa}. Nhập thông tin thu học phí khoá ${s.khoa+1}:</p>
       <div class="fg-row">
-        <div class="fg"><label>Số tiền thu (đ)</label><input type="number" id="pAmt" value="${s.hocPhi||0}" placeholder="1200000"></div>
+        <div class="fg"><label>Số tiền thu (đ)</label><input type="number" id="pAmt" value="${s.hocPhi||0}" placeholder="1,200,000" step="100000" min="0"></div>
         <div class="fg"><label>Hình thức</label><select id="pMethod"><option>Tiền mặt</option><option>Chuyển khoản</option></select></div>
       </div>
       <div class="fg"><label>Ghi chú</label><input type="text" id="pNote" placeholder="Ghi chú tuỳ chọn..."></div>`,
@@ -636,7 +636,7 @@ function openAddStu(){
   showMdl('Thêm học viên mới',`
     <div class="fg"><label>Tên bé</label><input type="text" id="fN" placeholder="Vd: Bé An"></div>
     <div class="fg-row">
-      <div class="fg"><label>Học phí/khoá (đ)</label><input type="number" id="fHP" placeholder="1200000" value="1200000"></div>
+      <div class="fg"><label>Học phí/khoá (đ)</label><input type="number" id="fHP" placeholder="1,200,000" value="1200000" step="100000" min="0"></div>
       <div class="fg"><label>Ngày bắt đầu</label><input type="date" id="fD" value="${todayS()}"></div>
     </div>
     <div class="fg"><label>Ghi chú</label><input type="text" id="fNt" placeholder="Tuỳ chọn..."></div>`,
@@ -648,7 +648,7 @@ async function doAddStu(){
   const student={id:Date.now().toString(),ten:name,khoa:1,buoi:0,paid:true,startDate:document.getElementById('fD').value,hocPhi:Number(document.getElementById('fHP').value)||0,status:'active',note:document.getElementById('fNt').value};
   try{
     const r=await api('saveStudent',{student:{id:student.id,ten:student.ten,khoa_hien_tai:1,buoi_hien_tai:0,da_dong_tien:true,ngay_bat_dau:student.startDate,hoc_phi_khoa:student.hocPhi,trang_thai:'active',ghi_chu:student.note}});
-    db.students.push({...student,sessions:[],payments:[]});
+    db.students.push({...student, name, sessions:[], payments:[]});
     closeMdl();renderAll();toast('Đã thêm '+name);
   }catch(e){toast('Lỗi: '+e.message,'err');}
 }
@@ -658,7 +658,7 @@ function openEditStu(sid){
   showMdl(`Sửa thông tin — ${s.name}`,`
     <div class="fg"><label>Tên bé</label><input type="text" id="eN" value="${s.name}"></div>
     <div class="fg-row">
-      <div class="fg"><label>Học phí/khoá (đ)</label><input type="number" id="eHP" value="${s.hocPhi||0}"></div>
+      <div class="fg"><label>Học phí/khoá (đ)</label><input type="number" id="eHP" value="${s.hocPhi||0}" step="100000" min="0"></div>
       <div class="fg"><label>Trạng thái</label>
         <select id="eSt">
           <option value="active"${s.status==='active'?' selected':''}>Đang học</option>
@@ -762,7 +762,7 @@ function openPayModal(sid){
   showMdl(`Thu học phí Khoá ${s.khoa+1} — ${s.name}`,`
     <p style="margin-bottom:12px;color:var(--text2);font-size:13px">Xác nhận đã thu học phí khoá ${s.khoa+1} cho <b style="color:var(--text)">${s.name}</b>:</p>
     <div class="fg-row">
-      <div class="fg"><label>Số tiền (đ)</label><input type="number" id="pmAmt" value="${s.hocPhi||0}" placeholder="1200000"></div>
+      <div class="fg"><label>Số tiền (đ)</label><input type="number" id="pmAmt" value="${s.hocPhi||0}" placeholder="1,200,000" step="100000" min="0"></div>
       <div class="fg"><label>Ngày thu</label><input type="date" id="pmDate" value="${todayS()}"></div>
     </div>
     <div class="fg-row">
@@ -804,7 +804,7 @@ function openAddTeacher(){
     <div class="fg"><label>Tên giáo viên</label><input type="text" id="tN" placeholder="Vd: Cô Lan"></div>
     <div class="fg-row">
       <div class="fg"><label>Mã GV (2–4 ký tự)</label><input type="text" id="tC" maxlength="4" placeholder="Vd: LN" style="text-transform:uppercase"></div>
-      <div class="fg"><label>Lương/buổi (đ)</label><input type="number" id="tL" value="150000" placeholder="150000"></div>
+      <div class="fg"><label>Lương/buổi (đ)</label><input type="number" id="tL" value="150000" step="10000" min="0"></div>
     </div>`,
     [{l:'+ Thêm',c:'pr',fn:async()=>{
       const name=(document.getElementById('tN').value||'').trim();
@@ -821,7 +821,7 @@ function openEditGV(tid){
   const t=db.teachers.find(x=>x.id===tid);if(!t)return;
   showMdl(`Sửa — ${t.name}`,`
     <div class="fg"><label>Tên giáo viên</label><input type="text" id="etN" value="${t.name}"></div>
-    <div class="fg"><label>Lương/buổi (đ)</label><input type="number" id="etL" value="${t.luong}"></div>`,
+    <div class="fg"><label>Lương/buổi (đ)</label><input type="number" id="etL" value="${t.luong}" step="10000" min="0"></div>`,
     [{l:'Lưu',c:'pr',fn:async()=>{
       t.name=document.getElementById('etN').value.trim()||t.name;
       t.luong=Number(document.getElementById('etL').value)||150000;
@@ -913,11 +913,11 @@ function openSalExtra(gvId,thang,nam,luongHienTai){
   showMdl(`Chi tiết lương — ${t.name} · T${thang}/${nam}`,`
     <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Lương mặc định GV: <b>${fmtM(t.luong)}/buổi</b>. Nếu tháng này có lương khác, nhập vào ô bên dưới.</p>
     <div class="fg"><label>Lương/buổi tháng ${thang}/${nam} (đ) — để trống = dùng lương mặc định</label>
-      <input type="number" id="xLR" value="${extra.luongRieng||''}" placeholder="Vd: 170000 nếu tăng lương tháng này">
+      <input type="number" id="xLR" value="${extra.luongRieng||''}" placeholder="Vd: 170,000" step="10000" min="0">
     </div>
     <div class="fg-row">
-      <div class="fg"><label>Phụ cấp xăng xe (đ)</label><input type="number" id="xPC" value="${extra.phuCap||0}"></div>
-      <div class="fg"><label>Thưởng (đ)</label><input type="number" id="xTH" value="${extra.thuong||0}"></div>
+      <div class="fg"><label>Phụ cấp xăng xe (đ)</label><input type="number" id="xPC" value="${extra.phuCap||0}" step="10000" min="0"></div>
+      <div class="fg"><label>Thưởng (đ)</label><input type="number" id="xTH" value="${extra.thuong||0}" step="10000" min="0"></div>
     </div>
     <div class="fg"><label>Ghi chú</label><input type="text" id="xNT" value="${extra.note||''}" placeholder="Vd: Tăng lương từ T6, thưởng cuối tháng..."></div>`,
     [{l:'Lưu',c:'pr',fn:()=>{
@@ -1060,7 +1060,7 @@ function openAddExpense(){
   showMdl('Ghi chi phí',`
     <div class="fg-row">
       <div class="fg"><label>Ngày</label><input type="date" id="eD" value="${todayS()}"></div>
-      <div class="fg"><label>Số tiền (đ)</label><input type="number" id="eA" placeholder="500000"></div>
+      <div class="fg"><label>Số tiền (đ)</label><input type="number" id="eA" placeholder="500,000" step="50000" min="0"></div>
     </div>
     <div class="fg"><label>Mô tả chi phí</label><input type="text" id="eDe" placeholder="Vd: Mua cọ vẽ, tiền thuê mặt bằng..."></div>
     <div class="fg-row">
