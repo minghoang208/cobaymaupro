@@ -304,20 +304,38 @@ const AK='cbm_api_v2', SK='cbm_sel_t';
 let API='', selT=[], db={students:[],teachers:[],payments:[],expenses:[],extras:[]};
 let todayAtt={}; // key: "date_ca" => [{sid, sessionId}]
 
-// ── Helpers nhập số tiền ──────────────────────────────────────
-function fmtInput(el){
-  const raw=el.value.replace(/[^\d]/g,'');
-  el.dataset.raw=raw||'0';
-  el.value=raw?Number(raw).toLocaleString('en-US'):'';
-}
-function getInputVal(id){
-  const el=document.getElementById(id);if(!el)return 0;
-  if(el.dataset.raw!==undefined&&el.dataset.raw!=='')return Number(el.dataset.raw)||0;
-  return Number((el.value||'').replace(/[^\d]/g,''))||0;
-}
-
 const DAYS_FULL=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
 const DAYS=['CN','T2','T3','T4','T5','T6','T7'];
+
+// ── Normalize date về YYYY-MM-DD ─────────────────────────────
+function normDate(d){
+  if(!d)return'';
+  if(typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d.trim()))return d.trim();
+  const dt=new Date(d);
+  if(isNaN(dt.getTime()))return String(d).trim();
+  return`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+// ── Format ngày có thứ ────────────────────────────────────────
+function fmtDateWithDay(d){
+  if(!d)return'—';
+  const s=normDate(d);
+  const dt=new Date(s+'T00:00:00');if(isNaN(dt))return fmt(d);
+  return`${DAYS_FULL[dt.getDay()]} ${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+}
+
+// ── Format input tiền có dấu phẩy ────────────────────────────
+function fmtInput(el){
+  const raw=el.value.replace(/[^0-9]/g,'');
+  el.value=raw?Number(raw).toLocaleString('en-US'):'';
+  el.dataset.raw=raw||'0';
+}
+function getInputVal(id){
+  const el=document.getElementById(id);
+  if(!el)return 0;
+  const raw=el.dataset.raw||el.value.replace(/[^0-9]/g,'')||'0';
+  return Number(raw);
+}
 function updateDayLabel(){
   const d=document.getElementById('sDate').value;
   const el=document.getElementById('sDateDay');
@@ -354,34 +372,8 @@ function syncTodayAtt(){
   rAtt();
 }
 
-// Normalize date về dạng YYYY-MM-DD bất kể Sheet trả về dạng gì
-const normDate=d=>{
-  if(!d)return'';
-  if(typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d.trim()))return d.trim();
-  // Google Sheets đôi khi trả về Date object dạng "Mon Jun 07 2025..."
-  const dt=new Date(d);
-  if(isNaN(dt.getTime()))return String(d).trim();
-  const y=dt.getFullYear();
-  const m=String(dt.getMonth()+1).padStart(2,'0');
-  const day=String(dt.getDate()).padStart(2,'0');
-  return`${y}-${m}-${day}`;
-};
-const fmt=d=>{if(!d)return'—';const dt=new Date(d);if(isNaN(dt))return d;return`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`};
-const fmtFull=d=>{
-  if(!d)return'—';
-  const dt=new Date(d);if(isNaN(dt))return d;
-  const day=DAYS[dt.getDay()];
-  // Tính tuần trong tháng
-  const firstDay=new Date(dt.getFullYear(),dt.getMonth(),1);
-  const week=Math.ceil((dt.getDate()+firstDay.getDay())/7);
-  return`${day} ${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} (Tuần ${week})`;
-};
+const fmt=d=>{if(!d)return'—';const dt=new Date(normDate(d)+'T00:00:00');if(isNaN(dt))return d;return`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`};
 const fmtM=n=>{if(n==null)return'—';return Number(n).toLocaleString('en-US')+'đ';};
-const fmtDateWithDay=d=>{
-  if(!d)return'—';
-  const dt=new Date(d+'T00:00:00');if(isNaN(dt))return fmt(d);
-  return`${DAYS[dt.getDay()]} ${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
-};
 const todayS=()=>new Date().toISOString().slice(0,10);
 const sesKey=()=>document.getElementById('sDate').value+'_'+document.getElementById('sShift').value;
 const isAtt=sid=>!!(todayAtt[sesKey()]&&todayAtt[sesKey()].find(x=>x.sid===sid));
@@ -623,22 +615,7 @@ function doAtt(sid, type='official'){
     loai_buoi:type,da_dong_tien:np,
     ngay_bat_dau:(!snapBuoi===0&&type==='official'&&nb===1)?dateVal:s.startDate
   };
-  api('addSession',{session:sess}).then(r=>{
-    // Cập nhật sessionId thật từ server vào local
-    // (server tạo ID riêng, phải dùng ID đó để deleteSession sau này mới match được)
-    if(r.sessionId){
-      const localSess=s.sessions.find(x=>x.id===newSessId);
-      if(localSess)localSess.id=r.sessionId;
-      // Cập nhật todayAtt với sessionId thật
-      const k=sesKey();
-      if(todayAtt[k]){
-        const att=todayAtt[k].find(x=>x.sessionId===newSessId);
-        if(att)att.sessionId=r.sessionId;
-      }
-    }
-    // Cập nhật khoa/buoi từ server (re-index chính xác hơn)
-    if(r.newKhoa!==undefined&&type==='official'){s.khoa=r.newKhoa;s.buoi=r.newBuoi;rAtt();}
-  }).catch(e=>{
+  api('addSession',{session:sess}).catch(e=>{
     // Rollback
     s.khoa=snapKhoa;s.buoi=snapBuoi;s.paid=snapPaid;
     s.sessions=s.sessions.filter(x=>x.id!==newSessId);
@@ -731,7 +708,7 @@ function confDelStu(sid){
     [{l:'Xoá',c:'dn',fn:async()=>{await api('deleteStudent',{id:sid});db.students=db.students.filter(x=>x.id!==sid);closeMdl();renderAll();toast('Đã xoá');}},'Huỷ']);
 }
 
-function openDetail(sid){ setTimeout(()=>renderDetail(sid),0); }
+function openDetail(sid){ renderDetail(sid); }
 
 function renderDetail(sid){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
@@ -777,7 +754,9 @@ function renderDetail(sid){
 
 function delOneSess(sid, sessionId, buoi, khoa, date){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
-  // Optimistic: xoá local ngay lập tức
+  if(!confirm(`Xác nhận xoá Buổi ${buoi} (${fmt(date)}) của ${s.name}?`))return;
+
+  // ── Optimistic: xoá local ngay lập tức ──
   const snapSessions=[...s.sessions];
   const snapKhoa=s.khoa, snapBuoi=s.buoi, snapPaid=s.paid;
   s.sessions=s.sessions.filter(x=>!(String(x.id)===String(sessionId)||(x.buoi===buoi&&x.khoa===khoa&&normDate(x.date)===normDate(date))));
@@ -822,11 +801,8 @@ function openPayModal(sid){
       const note=document.getElementById('pmNote').value;
       try{
         await api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:date,so_tien:amt,khoa_so:s.khoa+1,hinh_thuc:method,ghi_chu:note}});
-        const newPay={id:Date.now().toString(),sid:s.id,name:s.name,date,amount:amt,khoa:s.khoa+1,method,note};
         s.paid=true;
-        if(!s.payments)s.payments=[];
-        s.payments.push({id:newPay.id,date,amount:amt,khoa:s.khoa+1,method,note});
-        db.payments.push(newPay);
+        db.payments.push({id:Date.now().toString(),sid:s.id,name:s.name,date,amount:amt,khoa:s.khoa+1,method,note});
         closeMdl();renderAll();toast(`✓ Đã thu ${fmtM(amt)} — ${s.name}`);
       }catch(e){toast('Lỗi: '+e.message,'err');}
     }},{l:'Huỷ',fn:closeMdl}]);
@@ -940,16 +916,9 @@ function openPayK1Modal(sid){
       const method=document.getElementById('pk1Method').value;
       const note=document.getElementById('pk1Note').value;
       const newId=Date.now().toString();
-      const newPay={id:newId,sid:s.id,name:s.name,date,amount:amt,khoa:1,method,note};
-      db.payments.push(newPay);
-      if(!s.payments)s.payments=[];
-      s.payments.push({id:newId,date,amount:amt,khoa:1,method,note});
+      db.payments.push({id:newId,sid:s.id,name:s.name,date,amount:amt,khoa:1,method,note});
       closeMdl();renderAll();toast(`✓ Đã thu ${fmtM(amt)} — ${s.name}`);
-      api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:date,so_tien:amt,khoa_so:1,hinh_thuc:method,ghi_chu:note}}).catch(e=>{
-        db.payments=db.payments.filter(x=>x.id!==newId);
-        s.payments=s.payments.filter(x=>x.id!==newId);
-        renderAll();toast('Lỗi ghi Sheet: '+e.message,'err');
-      });
+      api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:date,so_tien:amt,khoa_so:1,hinh_thuc:method,ghi_chu:note}}).catch(e=>toast('Lỗi ghi Sheet: '+e.message,'err'));
     }},{l:'Huỷ',fn:closeMdl}]);
 }
 
