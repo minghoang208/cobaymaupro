@@ -725,13 +725,17 @@ function renderDetail(sid){
       </div>`;
     list.forEach(ss=>{
       const gv=(ss.teachers||[]).map(tid=>{const t=db.teachers.find(x=>x.id===tid);return t?t.name:tid;}).join(', ')||'—';
+      const safeDate=normDate(ss.date)||'';
+      const safeBuoi=Number(ss.buoi)||0;
+      const safeKhoa=Number(ss.khoa)||1;
+      const safeSessId=(ss.id||'').replace(/'/g,"\\'");
       html+=`<div class="hi" style="align-items:center">
-        <span class="hd" style="${ss.type==='trial'||ss.buoi===0?'background:var(--amber-l);color:var(--amber)':''}">${ss.type==='trial'||ss.buoi===0?'🔍':''+ss.buoi}</span>
-        <span style="min-width:130px;font-size:13px">${fmtDateWithDay(ss.date)}</span>
+        <span class="hd" style="${ss.type==='trial'||safeBuoi===0?'background:var(--amber-l);color:var(--amber)':''}">${ss.type==='trial'||safeBuoi===0?'🔍':safeBuoi}</span>
+        <span style="min-width:130px;font-size:13px">${fmtDateWithDay(safeDate)}</span>
         <span style="color:var(--text2);margin-right:6px;font-size:12px">Ca ${ss.shift||'—'}</span>
-        ${ss.type==='trial'||ss.buoi===0?'<span class="bdg ba" style="font-size:10px;margin-right:6px">Học thử</span>':''}
+        ${ss.type==='trial'||safeBuoi===0?'<span class="bdg ba" style="font-size:10px;margin-right:6px">Học thử</span>':''}
         <span style="color:var(--text3);font-size:12px;flex:1">${gv}</span>
-        <button onclick="delOneSess('${sid}','${ss.id||''}',${ss.buoi},${ss.khoa},'${ss.date}')" style="padding:3px 7px;border:1px solid #f09595;border-radius:6px;background:var(--red-l);color:var(--red);font-size:11px;cursor:pointer;flex-shrink:0" title="Xoá buổi này">🗑</button>
+        <button onclick="delOneSess('${sid}','${safeSessId}',${safeBuoi},${safeKhoa},'${safeDate}')" style="padding:3px 7px;border:1px solid #f09595;border-radius:6px;background:var(--red-l);color:var(--red);font-size:11px;cursor:pointer;flex-shrink:0" title="Xoá buổi này">🗑</button>
       </div>`;
     });
     html+=`</div>`;
