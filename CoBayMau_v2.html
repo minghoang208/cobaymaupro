@@ -304,6 +304,20 @@ const AK='cbm_api_v2', SK='cbm_sel_t';
 let API='', selT=[], db={students:[],teachers:[],payments:[],expenses:[],extras:[]};
 let todayAtt={}; // key: "date_ca" => [{sid, sessionId}]
 
+// ── Helpers nhập số tiền có dấu phân cách ─────────────────────
+function fmtInput(el){
+  const raw=el.value.replace(/[^\d]/g,'');
+  el.dataset.raw=raw||'0';
+  el.value=raw?Number(raw).toLocaleString('en-US'):'';
+}
+function getInputVal(id){
+  const el=document.getElementById(id);
+  if(!el)return 0;
+  // Ưu tiên data-raw (set bởi fmtInput), fallback parse text
+  if(el.dataset.raw!==undefined&&el.dataset.raw!=='')return Number(el.dataset.raw)||0;
+  return Number((el.value||'').replace(/[^\d]/g,''))||0;
+}
+
 const DAYS_FULL=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
 const DAYS=['CN','T2','T3','T4','T5','T6','T7'];
 function updateDayLabel(){
@@ -704,7 +718,7 @@ function confDelStu(sid){
     [{l:'Xoá',c:'dn',fn:async()=>{await api('deleteStudent',{id:sid});db.students=db.students.filter(x=>x.id!==sid);closeMdl();renderAll();toast('Đã xoá');}},'Huỷ']);
 }
 
-function openDetail(sid){ renderDetail(sid); }
+function openDetail(sid){ setTimeout(()=>renderDetail(sid),0); }
 
 function renderDetail(sid){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
@@ -750,7 +764,6 @@ function renderDetail(sid){
 
 function delOneSess(sid, sessionId, buoi, khoa, date){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
-  if(!confirm(`Xác nhận xoá Buổi ${buoi} (${fmt(date)}) của ${s.name}?`))return;
 
   // ── Optimistic: xoá local ngay lập tức ──
   const snapSessions=[...s.sessions];
@@ -797,8 +810,11 @@ function openPayModal(sid){
       const note=document.getElementById('pmNote').value;
       try{
         await api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:date,so_tien:amt,khoa_so:s.khoa+1,hinh_thuc:method,ghi_chu:note}});
+        const newPay={id:Date.now().toString(),sid:s.id,name:s.name,date,amount:amt,khoa:s.khoa+1,method,note};
         s.paid=true;
-        db.payments.push({id:Date.now().toString(),sid:s.id,name:s.name,date,amount:amt,khoa:s.khoa+1,method,note});
+        if(!s.payments)s.payments=[];
+        s.payments.push({id:newPay.id,date,amount:amt,khoa:s.khoa+1,method,note});
+        db.payments.push(newPay);
         closeMdl();renderAll();toast(`✓ Đã thu ${fmtM(amt)} — ${s.name}`);
       }catch(e){toast('Lỗi: '+e.message,'err');}
     }},{l:'Huỷ',fn:closeMdl}]);
@@ -912,9 +928,16 @@ function openPayK1Modal(sid){
       const method=document.getElementById('pk1Method').value;
       const note=document.getElementById('pk1Note').value;
       const newId=Date.now().toString();
-      db.payments.push({id:newId,sid:s.id,name:s.name,date,amount:amt,khoa:1,method,note});
+      const newPay={id:newId,sid:s.id,name:s.name,date,amount:amt,khoa:1,method,note};
+      db.payments.push(newPay);
+      if(!s.payments)s.payments=[];
+      s.payments.push({id:newId,date,amount:amt,khoa:1,method,note});
       closeMdl();renderAll();toast(`✓ Đã thu ${fmtM(amt)} — ${s.name}`);
-      api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:date,so_tien:amt,khoa_so:1,hinh_thuc:method,ghi_chu:note}}).catch(e=>toast('Lỗi ghi Sheet: '+e.message,'err'));
+      api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:date,so_tien:amt,khoa_so:1,hinh_thuc:method,ghi_chu:note}}).catch(e=>{
+        db.payments=db.payments.filter(x=>x.id!==newId);
+        s.payments=s.payments.filter(x=>x.id!==newId);
+        renderAll();toast('Lỗi ghi Sheet: '+e.message,'err');
+      });
     }},{l:'Huỷ',fn:closeMdl}]);
 }
 
