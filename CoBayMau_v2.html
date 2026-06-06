@@ -304,16 +304,14 @@ const AK='cbm_api_v2', SK='cbm_sel_t';
 let API='', selT=[], db={students:[],teachers:[],payments:[],expenses:[],extras:[]};
 let todayAtt={}; // key: "date_ca" => [{sid, sessionId}]
 
-// ── Helpers nhập số tiền có dấu phân cách ─────────────────────
+// ── Helpers nhập số tiền ──────────────────────────────────────
 function fmtInput(el){
   const raw=el.value.replace(/[^\d]/g,'');
   el.dataset.raw=raw||'0';
   el.value=raw?Number(raw).toLocaleString('en-US'):'';
 }
 function getInputVal(id){
-  const el=document.getElementById(id);
-  if(!el)return 0;
-  // Ưu tiên data-raw (set bởi fmtInput), fallback parse text
+  const el=document.getElementById(id);if(!el)return 0;
   if(el.dataset.raw!==undefined&&el.dataset.raw!=='')return Number(el.dataset.raw)||0;
   return Number((el.value||'').replace(/[^\d]/g,''))||0;
 }
@@ -625,7 +623,22 @@ function doAtt(sid, type='official'){
     loai_buoi:type,da_dong_tien:np,
     ngay_bat_dau:(!snapBuoi===0&&type==='official'&&nb===1)?dateVal:s.startDate
   };
-  api('addSession',{session:sess}).catch(e=>{
+  api('addSession',{session:sess}).then(r=>{
+    // Cập nhật sessionId thật từ server vào local
+    // (server tạo ID riêng, phải dùng ID đó để deleteSession sau này mới match được)
+    if(r.sessionId){
+      const localSess=s.sessions.find(x=>x.id===newSessId);
+      if(localSess)localSess.id=r.sessionId;
+      // Cập nhật todayAtt với sessionId thật
+      const k=sesKey();
+      if(todayAtt[k]){
+        const att=todayAtt[k].find(x=>x.sessionId===newSessId);
+        if(att)att.sessionId=r.sessionId;
+      }
+    }
+    // Cập nhật khoa/buoi từ server (re-index chính xác hơn)
+    if(r.newKhoa!==undefined&&type==='official'){s.khoa=r.newKhoa;s.buoi=r.newBuoi;rAtt();}
+  }).catch(e=>{
     // Rollback
     s.khoa=snapKhoa;s.buoi=snapBuoi;s.paid=snapPaid;
     s.sessions=s.sessions.filter(x=>x.id!==newSessId);
@@ -764,8 +777,7 @@ function renderDetail(sid){
 
 function delOneSess(sid, sessionId, buoi, khoa, date){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
-
-  // ── Optimistic: xoá local ngay lập tức ──
+  // Optimistic: xoá local ngay lập tức
   const snapSessions=[...s.sessions];
   const snapKhoa=s.khoa, snapBuoi=s.buoi, snapPaid=s.paid;
   s.sessions=s.sessions.filter(x=>!(String(x.id)===String(sessionId)||(x.buoi===buoi&&x.khoa===khoa&&normDate(x.date)===normDate(date))));
