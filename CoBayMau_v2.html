@@ -162,7 +162,7 @@ tr:hover td{background:#fafaf9}
     </div>
     <div id="lookupResult" style="display:none;margin-bottom:12px"></div>
     <div class="tw"><table>
-      <thead><tr><th style="width:36px">#</th><th>Tên bé</th><th style="width:95px">Học phí/khoá</th><th style="width:88px">Khoá·Buổi</th><th style="width:76px">Tổng</th><th style="width:108px">Điểm danh</th><th style="width:140px">Trạng thái</th></tr></thead>
+      <thead><tr><th style="width:36px">#</th><th>Tên bé</th><th style="width:95px">Học phí/khoá</th><th style="width:88px">Khoá·Buổi</th><th style="width:76px">Tổng</th><th style="width:108px">Điểm danh</th><th style="width:40px"></th><th style="width:140px">Trạng thái</th></tr></thead>
       <tbody id="tbAtt"><tr><td colspan="7" class="load"><span class="spin"></span>Đang tải...</td></tr></tbody>
     </table></div>
   </div>
@@ -453,10 +453,10 @@ function rAtt(){
   document.getElementById('stW').textContent=w;
   document.getElementById('stPay').textContent=pay;
   const tb=document.getElementById('tbAtt');
-  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="load">Không tìm thấy</td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="8" class="load">Không tìm thấy</td></tr>';return;}
   tb.innerHTML=list.map((s,i)=>{
     const att=isAtt(s.id);
-    const attType=getAttType(s.id); // 'trial' hoặc 'official'
+    const attType=getAttType(s.id);
     const canAtt=s.status!=='quit'&&s.status!=='pause';
     let attCell='<span style="font-size:12px;color:var(--text3)">—</span>';
     if(canAtt){
@@ -465,9 +465,19 @@ function rAtt(){
       } else {
         attCell=`<div style="display:flex;gap:4px">
           <button class="ck" style="flex:1" onclick="togAtt('${s.id}','official')">Điểm danh</button>
-          <button class="ck" style="background:var(--amber-l);color:var(--amber);border-color:#FAC775;padding:6px 8px;font-size:11px" onclick="togAtt('${s.id}','trial')" title="Đánh dấu học thử — không tính buổi">🔍</button>
+          <button class="ck" style="background:var(--amber-l);color:var(--amber);border-color:#FAC775;padding:6px 8px;font-size:11px" onclick="togAtt('${s.id}','trial')" title="Học thử">🔍</button>
         </div>`;
       }
+    }
+    // Nút thu tiền K1 nếu bé chưa có payment nào
+    const hasPayment=(s.payments||[]).length>0;
+    const showPayK1=s.buoi===0&&!hasPayment&&s.status==='active';
+    let statusCell=statusLabel(s,true);
+    if(showPayK1){
+      statusCell=`<div style="display:flex;flex-direction:column;gap:4px">
+        <span class="bdg bk">Chưa học</span>
+        <button onclick="openPayK1Modal('${s.id}')" style="padding:3px 9px;border:1px solid var(--green-m);border-radius:6px;background:var(--green-l);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">💰 Thu tiền K1</button>
+      </div>`;
     }
     return`<tr>
       <td style="color:var(--text3);font-size:12px">${i+1}</td>
@@ -476,7 +486,8 @@ function rAtt(){
       <td style="text-align:center;font-size:12px;color:var(--text2)">${s.buoi===0?'—':`K${s.khoa}·B${s.buoi}`}</td>
       <td style="text-align:center">${(s.khoa-1)*8+s.buoi}</td>
       <td>${attCell}</td>
-      <td>${statusLabel(s,true)}</td>
+      <td><button onclick="openDetail('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px 6px" title="Xem lịch sử">👁</button></td>
+      <td>${statusCell}</td>
     </tr>`;
   }).join('');
 }
@@ -534,12 +545,12 @@ function _doAttFlow(sid){
     showMdl('Thu học phí khoá '+(s.khoa+1),`
       <p style="margin-bottom:12px;color:var(--text2)"><b style="color:var(--text)">${s.name}</b> đã hoàn thành khoá ${s.khoa}. Nhập thông tin thu học phí khoá ${s.khoa+1}:</p>
       <div class="fg-row">
-        <div class="fg"><label>Số tiền thu (đ)</label><input type="number" id="pAmt" value="${s.hocPhi||0}" placeholder="1,200,000" step="100000" min="0"></div>
+        <div class="fg"><label>Số tiền thu (đ)</label><input type="text" id="pAmt" value="${s.hocPhi?Number(s.hocPhi).toLocaleString('en-US'):''}" placeholder="1,200,000" inputmode="numeric" oninput="fmtInput(this)" data-raw="${s.hocPhi||0}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
         <div class="fg"><label>Hình thức</label><select id="pMethod"><option>Tiền mặt</option><option>Chuyển khoản</option></select></div>
       </div>
       <div class="fg"><label>Ghi chú</label><input type="text" id="pNote" placeholder="Ghi chú tuỳ chọn..."></div>`,
       [{l:'Đã thu → Điểm danh',c:'pr',fn:()=>{
-        const amt=Number(document.getElementById('pAmt').value)||0;
+        const amt=getInputVal('pAmt');
         const method=document.getElementById('pMethod').value;
         const note=document.getElementById('pNote').value;
         const dateVal=document.getElementById('sDate').value;
@@ -636,7 +647,7 @@ function openAddStu(){
   showMdl('Thêm học viên mới',`
     <div class="fg"><label>Tên bé</label><input type="text" id="fN" placeholder="Vd: Bé An"></div>
     <div class="fg-row">
-      <div class="fg"><label>Học phí/khoá (đ)</label><input type="number" id="fHP" placeholder="1,200,000" value="1200000" step="100000" min="0"></div>
+      <div class="fg"><label>Học phí/khoá (đ)</label><input type="text" id="fHP" value="1,200,000" placeholder="1,200,000" inputmode="numeric" oninput="fmtInput(this)" data-raw="1200000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
       <div class="fg"><label>Ngày bắt đầu</label><input type="date" id="fD" value="${todayS()}"></div>
     </div>
     <div class="fg"><label>Ghi chú</label><input type="text" id="fNt" placeholder="Tuỳ chọn..."></div>`,
@@ -645,7 +656,7 @@ function openAddStu(){
 async function doAddStu(){
   const name=(document.getElementById('fN').value||'').trim();
   if(!name){toast('Nhập tên bé!','err');return;}
-  const student={id:Date.now().toString(),ten:name,khoa:1,buoi:0,paid:true,startDate:document.getElementById('fD').value,hocPhi:Number(document.getElementById('fHP').value)||0,status:'active',note:document.getElementById('fNt').value};
+  const student={id:Date.now().toString(),ten:name,khoa:1,buoi:0,paid:true,startDate:document.getElementById('fD').value,hocPhi:getInputVal('fHP'),status:'active',note:document.getElementById('fNt').value};
   try{
     const r=await api('saveStudent',{student:{id:student.id,ten:student.ten,khoa_hien_tai:1,buoi_hien_tai:0,da_dong_tien:true,ngay_bat_dau:student.startDate,hoc_phi_khoa:student.hocPhi,trang_thai:'active',ghi_chu:student.note}});
     db.students.push({...student, name, sessions:[], payments:[]});
@@ -658,7 +669,7 @@ function openEditStu(sid){
   showMdl(`Sửa thông tin — ${s.name}`,`
     <div class="fg"><label>Tên bé</label><input type="text" id="eN" value="${s.name}"></div>
     <div class="fg-row">
-      <div class="fg"><label>Học phí/khoá (đ)</label><input type="number" id="eHP" value="${s.hocPhi||0}" step="100000" min="0"></div>
+      <div class="fg"><label>Học phí/khoá (đ)</label><input type="text" id="eHP" value="${s.hocPhi?Number(s.hocPhi).toLocaleString('en-US'):''}" placeholder="1,200,000" inputmode="numeric" oninput="fmtInput(this)" data-raw="${s.hocPhi||0}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
       <div class="fg"><label>Trạng thái</label>
         <select id="eSt">
           <option value="active"${s.status==='active'?' selected':''}>Đang học</option>
@@ -674,7 +685,7 @@ function openEditStu(sid){
     <div class="fg"><label>Ghi chú</label><input type="text" id="eNt" value="${s.note||''}"></div>`,
     [{l:'Lưu',c:'pr',fn:async()=>{
       s.name=document.getElementById('eN').value.trim()||s.name;
-      s.hocPhi=Number(document.getElementById('eHP').value)||0;
+      s.hocPhi=getInputVal('eHP');
       s.status=document.getElementById('eSt').value;
       s.ngayNghi=document.getElementById('eND').value;
       s.lyDo=document.getElementById('eLR').value;
@@ -732,28 +743,33 @@ function renderDetail(sid){
   showMdl(`Lịch sử — ${s.name}`,html,[{l:'Đóng',fn:closeMdl}]);
 }
 
-async function delOneSess(sid, sessionId, buoi, khoa, date){
+function delOneSess(sid, sessionId, buoi, khoa, date){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
-  if(!confirm(`Xác nhận xoá Buổi ${buoi} (${fmt(date)}) của ${s.name}?\nHệ thống sẽ tính lại số buổi.`))return;
-  try{
-    // Nếu sessionId rỗng (session cũ chưa có id) thì tìm theo date+buoi+khoa trong sheet
-    const r=await api('deleteSession',{sessionId:sessionId||'',studentId:sid,buoi_so:buoi,khoa_so:khoa,ngay:date});
-    // Rollback local
-    s.sessions=(s.sessions||[]).filter(x=>!(x.id===sessionId||(x.buoi===buoi&&x.khoa===khoa&&x.date===date)));
-    // Re-index buoi local cho khớp với server
-    const official=s.sessions.filter(x=>x.type!=='trial'&&x.buoi>0).sort((a,b)=>a.khoa!==b.khoa?a.khoa-b.khoa:new Date(a.date)-new Date(b.date));
-    const kc={};
-    official.forEach(ss=>{if(!kc[ss.khoa])kc[ss.khoa]=0;kc[ss.khoa]++;ss.buoi=kc[ss.khoa];});
-    if(r.newKhoa!==undefined){s.khoa=r.newKhoa;s.buoi=r.newBuoi;}
-    else if(official.length){const last=official[official.length-1];s.khoa=last.khoa;s.buoi=last.buoi;}
-    else{s.khoa=1;s.buoi=0;}
-    if(s.buoi<8)s.paid=true;
-    // Xoá khỏi todayAtt nếu có
-    Object.keys(todayAtt).forEach(k=>{todayAtt[k]=todayAtt[k].filter(x=>x.sessionId!==sessionId);});
-    toast(`Đã xoá Buổi ${buoi} của ${s.name}`);
-    renderAll();
-    renderDetail(sid); // Mở lại modal với data mới
-  }catch(e){toast('Lỗi: '+e.message,'err');}
+  if(!confirm(`Xác nhận xoá Buổi ${buoi} (${fmt(date)}) của ${s.name}?`))return;
+
+  // ── Optimistic: xoá local ngay lập tức ──
+  const snapSessions=[...s.sessions];
+  const snapKhoa=s.khoa, snapBuoi=s.buoi, snapPaid=s.paid;
+  s.sessions=s.sessions.filter(x=>!(String(x.id)===String(sessionId)||(x.buoi===buoi&&x.khoa===khoa&&normDate(x.date)===normDate(date))));
+  const official=s.sessions.filter(x=>x.type!=='trial'&&x.buoi>0).sort((a,b)=>new Date(normDate(a.date))-new Date(normDate(b.date)));
+  const kc={};
+  official.forEach(ss=>{if(!kc[ss.khoa])kc[ss.khoa]=0;kc[ss.khoa]++;ss.buoi=kc[ss.khoa];});
+  if(official.length){const last=official[official.length-1];s.khoa=last.khoa;s.buoi=last.buoi;}
+  else{s.khoa=1;s.buoi=0;}
+  if(s.buoi<8)s.paid=true;
+  Object.keys(todayAtt).forEach(k=>{todayAtt[k]=(todayAtt[k]||[]).filter(x=>x.sessionId!==sessionId);});
+  renderAll();
+  renderDetail(sid);
+  toast(`Đã xoá Buổi ${buoi} của ${s.name}`);
+
+  // Gọi API ngầm, rollback nếu lỗi
+  api('deleteSession',{sessionId:sessionId||'',studentId:sid,buoi_so:buoi,khoa_so:khoa,ngay:date}).then(r=>{
+    if(r.newKhoa!==undefined){s.khoa=r.newKhoa;s.buoi=r.newBuoi;renderAll();}
+  }).catch(e=>{
+    s.sessions=snapSessions;s.khoa=snapKhoa;s.buoi=snapBuoi;s.paid=snapPaid;
+    renderAll();renderDetail(sid);
+    toast('Lỗi xoá, đã hoàn tác: '+e.message,'err');
+  });
 }
 
 // ── Thu tiền độc lập (không cần điểm danh) ──────────────────
@@ -762,7 +778,7 @@ function openPayModal(sid){
   showMdl(`Thu học phí Khoá ${s.khoa+1} — ${s.name}`,`
     <p style="margin-bottom:12px;color:var(--text2);font-size:13px">Xác nhận đã thu học phí khoá ${s.khoa+1} cho <b style="color:var(--text)">${s.name}</b>:</p>
     <div class="fg-row">
-      <div class="fg"><label>Số tiền (đ)</label><input type="number" id="pmAmt" value="${s.hocPhi||0}" placeholder="1,200,000" step="100000" min="0"></div>
+      <div class="fg"><label>Số tiền (đ)</label><input type="text" id="pmAmt" value="${s.hocPhi?Number(s.hocPhi).toLocaleString('en-US'):''}" placeholder="1,200,000" inputmode="numeric" oninput="fmtInput(this)" data-raw="${s.hocPhi||0}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
       <div class="fg"><label>Ngày thu</label><input type="date" id="pmDate" value="${todayS()}"></div>
     </div>
     <div class="fg-row">
@@ -770,7 +786,7 @@ function openPayModal(sid){
       <div class="fg"><label>Ghi chú</label><input type="text" id="pmNote" placeholder="Tuỳ chọn..."></div>
     </div>`,
     [{l:'✓ Xác nhận đã thu',c:'pr',fn:async()=>{
-      const amt=Number(document.getElementById('pmAmt').value)||0;
+      const amt=getInputVal('pmAmt');
       const date=document.getElementById('pmDate').value;
       const method=document.getElementById('pmMethod').value;
       const note=document.getElementById('pmNote').value;
@@ -858,7 +874,7 @@ function rLuong(){
     const total=luongCB+(extra.phuCap||0)+(extra.thuong||0);
     return`<tr>
       <td style="font-weight:600">${t.name}</td>
-      <td style="text-align:center;font-weight:600;color:var(--blue)">${uniqueBuoi} buổi</td>
+      <td style="text-align:center;font-weight:600;color:var(--blue);cursor:pointer;text-decoration:underline dotted" onclick="openGVDetail('${t.id}',${thang},${nam})" title="Xem chi tiết buổi dạy">${uniqueBuoi} buổi</td>
       <td style="font-size:12px;color:var(--text2)">${fmtM(luongBuoi)}${extra.luongRieng?'<span class="bdg bb" style="font-size:9px;margin-left:4px">T.chỉnh</span>':''}</td>
       <td style="font-weight:500">${fmtM(luongCB)}</td>
       <td style="color:var(--blue)">${fmtM(extra.phuCap||0)}</td>
@@ -872,39 +888,65 @@ function rLuong(){
   }).join('');
 }
 
+// ── Thu tiền Khoá 1 (bé mới chưa học buổi nào) ──────────────
+function openPayK1Modal(sid){
+  const s=db.students.find(x=>x.id===sid);if(!s)return;
+  showMdl(`Thu học phí Khoá 1 — ${s.name}`,`
+    <p style="margin-bottom:12px;color:var(--text2);font-size:13px">Thu học phí khoá 1 cho <b style="color:var(--text)">${s.name}</b>:</p>
+    <div class="fg-row">
+      <div class="fg"><label>Số tiền (đ)</label><input type="text" id="pk1Amt" value="${s.hocPhi?Number(s.hocPhi).toLocaleString('en-US'):''}" placeholder="1,200,000" inputmode="numeric" oninput="fmtInput(this)" data-raw="${s.hocPhi||0}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
+      <div class="fg"><label>Ngày thu</label><input type="date" id="pk1Date" value="${todayS()}"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Hình thức</label><select id="pk1Method"><option>Tiền mặt</option><option>Chuyển khoản</option></select></div>
+      <div class="fg"><label>Ghi chú</label><input type="text" id="pk1Note" placeholder="Tuỳ chọn..."></div>
+    </div>`,
+    [{l:'✓ Xác nhận đã thu',c:'pr',fn:()=>{
+      const amt=getInputVal('pk1Amt');
+      const date=document.getElementById('pk1Date').value;
+      const method=document.getElementById('pk1Method').value;
+      const note=document.getElementById('pk1Note').value;
+      const newId=Date.now().toString();
+      db.payments.push({id:newId,sid:s.id,name:s.name,date,amount:amt,khoa:1,method,note});
+      closeMdl();renderAll();toast(`✓ Đã thu ${fmtM(amt)} — ${s.name}`);
+      api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:date,so_tien:amt,khoa_so:1,hinh_thuc:method,ghi_chu:note}}).catch(e=>toast('Lỗi ghi Sheet: '+e.message,'err'));
+    }},{l:'Huỷ',fn:closeMdl}]);
+}
+
 function openGVDetail(gvId, thang, nam){
   const t=db.teachers.find(x=>x.id===gvId);if(!t)return;
   const allSess=db.students.flatMap(s=>s.sessions||[]).filter(ss=>{
     if(!ss.teachers||!ss.teachers.includes(gvId))return false;
     if(ss.type==='trial'||ss.buoi<=0)return false;
-    const d=new Date(ss.date);return d.getMonth()+1===thang&&d.getFullYear()===nam;
+    const d=new Date(normDate(ss.date));return d.getMonth()+1===thang&&d.getFullYear()===nam;
   });
-  // Group unique ngày+ca
   const buoiMap={};
   allSess.forEach(ss=>{
-    const k=ss.date+'_'+(ss.shift||'');
-    if(!buoiMap[k])buoiMap[k]={date:ss.date,shift:ss.shift||'—',count:0};
+    const k=normDate(ss.date)+'_'+(ss.shift||'');
+    if(!buoiMap[k])buoiMap[k]={date:normDate(ss.date),shift:ss.shift||'—',count:0};
     buoiMap[k].count++;
   });
   const buoiList=Object.values(buoiMap).sort((a,b)=>new Date(a.date)-new Date(b.date));
-  let html=`<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">
-    <span class="bdg bb">${buoiList.length} buổi dạy</span>
+  let html=`<div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+    <span class="bdg bb" style="font-size:13px;padding:4px 12px">${buoiList.length} buổi dạy</span>
     <span style="font-size:12px;color:var(--text2)">Tháng ${thang}/${nam}</span>
   </div>`;
-  if(!buoiList.length){html+='<p style="color:var(--text2);font-size:13px">Không có buổi dạy trong tháng này.</p>';}
+  if(!buoiList.length){html+='<p style="color:var(--text2);font-size:13px;padding:12px 0">Không có buổi dạy trong tháng này.</p>';}
   else{
-    html+='<div class="tw"><table><thead><tr><th style="width:36px">#</th><th>Ngày</th><th style="width:80px">Ca</th><th style="width:80px">Số bé</th></tr></thead><tbody>';
+    html+='<div style="display:flex;flex-direction:column;gap:6px">';
     buoiList.forEach((b,i)=>{
-      html+=`<tr>
-        <td style="color:var(--text3);font-size:12px">${i+1}</td>
-        <td style="font-weight:500">${fmtFull(b.date)}</td>
-        <td><span class="bdg ${b.shift==='Sáng'?'bg':'bb'}">${b.shift}</span></td>
-        <td style="text-align:center;color:var(--text2);font-size:12px">${b.count} bé</td>
-      </tr>`;
+      const caColor=b.shift==='Sáng'?'var(--green)':'var(--blue)';
+      const caBg=b.shift==='Sáng'?'var(--green-l)':'var(--blue-l)';
+      html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:var(--rs);font-size:13px">
+        <span style="color:var(--text3);font-size:12px;min-width:20px;text-align:right">${i+1}</span>
+        <span style="font-weight:500;flex:1">${fmtDateWithDay(b.date)}</span>
+        <span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500;background:${caBg};color:${caColor}">${b.shift}</span>
+        <span style="font-size:12px;color:var(--text3)">${b.count} bé</span>
+      </div>`;
     });
-    html+='</tbody></table></div>';
+    html+='</div>';
   }
-  showMdl(`${t.name} — Chi tiết buổi dạy T${thang}/${nam}`,html,[{l:'Đóng',fn:closeMdl}]);
+  showMdl(`${t.name} — Tháng ${thang}/${nam}`,html,[{l:'Đóng',fn:closeMdl}]);
 }
 
 function openSalExtra(gvId,thang,nam,luongHienTai){
@@ -1060,7 +1102,7 @@ function openAddExpense(){
   showMdl('Ghi chi phí',`
     <div class="fg-row">
       <div class="fg"><label>Ngày</label><input type="date" id="eD" value="${todayS()}"></div>
-      <div class="fg"><label>Số tiền (đ)</label><input type="number" id="eA" placeholder="500,000" step="50000" min="0"></div>
+      <div class="fg"><label>Số tiền (đ)</label><input type="text" id="eA" placeholder="500,000" inputmode="numeric" oninput="fmtInput(this)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
     </div>
     <div class="fg"><label>Mô tả chi phí</label><input type="text" id="eDe" placeholder="Vd: Mua cọ vẽ, tiền thuê mặt bằng..."></div>
     <div class="fg-row">
@@ -1068,7 +1110,7 @@ function openAddExpense(){
       <div class="fg"><label>Ghi chú</label><input type="text" id="eNt" placeholder="Tuỳ chọn..."></div>
     </div>`,
     [{l:'Ghi nhận',c:'pr',fn:()=>{
-      const exp={ngay:document.getElementById('eD').value,so_tien:Number(document.getElementById('eA').value)||0,mo_ta:document.getElementById('eDe').value,hinh_thuc:document.getElementById('eMt').value,loai:'Chi',ghi_chu:document.getElementById('eNt').value};
+      const exp={ngay:document.getElementById('eD').value,so_tien:getInputVal('eA'),mo_ta:document.getElementById('eDe').value,hinh_thuc:document.getElementById('eMt').value,loai:'Chi',ghi_chu:document.getElementById('eNt').value};
       if(!exp.so_tien||!exp.mo_ta){toast('Nhập đủ số tiền và mô tả!','err');return;}
       const newId=Date.now().toString();
       // Optimistic: cập nhật local ngay
