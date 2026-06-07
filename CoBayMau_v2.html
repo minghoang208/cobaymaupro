@@ -656,9 +656,10 @@ function rStu(){
     <td style="text-align:center">${s.buoi}/8</td>
     <td style="font-size:12px;color:var(--text2)">${fmt(s.startDate)}</td>
     <td>${statusLabel(s,true)}</td>
-    <td><div style="display:flex;gap:4px">
+    <td><div style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn" style="padding:4px 8px;font-size:11px" onclick="openDetail('${s.id}')" title="Lịch sử">👁</button>
       <button class="btn sc" style="padding:4px 8px;font-size:11px" onclick="openEditStu('${s.id}')" title="Sửa">✏</button>
+      <button class="btn" style="padding:4px 8px;font-size:11px;background:var(--green-l);color:var(--green);border-color:var(--green-m)" onclick="openManualPay('${s.id}')" title="Thu tiền">💰</button>
       <button class="btn dn" style="padding:4px 8px;font-size:11px" onclick="confDelStu('${s.id}')" title="Xoá">✕</button>
     </div></td>
   </tr>`).join('');
@@ -683,6 +684,52 @@ async function doAddStu(){
     db.students.push({...student, name, sessions:[], payments:[]});
     closeMdl();renderAll();toast('Đã thêm '+name);
   }catch(e){toast('Lỗi: '+e.message,'err');}
+}
+
+// ── Thu tiền thủ công (bất kỳ lúc nào) ──────────────────────
+function openManualPay(sid){
+  const s=db.students.find(x=>x.id===sid);if(!s)return;
+  showMdl(`💰 Thu học phí — ${s.name}`,`
+    <p style="margin-bottom:12px;color:var(--text2);font-size:13px">
+      Hiện tại: <b style="color:var(--text)">Khoá ${s.khoa} · Buổi ${s.buoi}/8</b>
+    </p>
+    <div class="fg-row">
+      <div class="fg"><label>Khoá thu tiền</label>
+        <select id="mpKhoa" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)">
+          <option value="${s.khoa}">Khoá ${s.khoa} (hiện tại)</option>
+          <option value="${s.khoa+1}">Khoá ${s.khoa+1} (kế tiếp)</option>
+          ${s.khoa>1?`<option value="${s.khoa-1}">Khoá ${s.khoa-1} (trước)</option>`:''}
+        </select>
+      </div>
+      <div class="fg"><label>Ngày thu</label><input type="date" id="mpDate" value="${todayS()}"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Số tiền (đ)</label><input type="text" id="mpAmt" value="${s.hocPhi?Number(s.hocPhi).toLocaleString('en-US'):''}" placeholder="1,200,000" inputmode="numeric" oninput="fmtInput(this)" data-raw="${s.hocPhi||0}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
+      <div class="fg"><label>Hình thức</label>
+        <select id="mpMethod" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)">
+          <option>Tiền mặt</option><option>Chuyển khoản</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Ghi chú</label><input type="text" id="mpNote" placeholder="Vd: Thu trước khoá, đóng bù..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>`,
+    [{l:'✓ Xác nhận thu',c:'pr',fn:()=>{
+      const khoa=Number(document.getElementById('mpKhoa').value);
+      const date=document.getElementById('mpDate').value;
+      const amt=getInputVal('mpAmt');
+      const method=document.getElementById('mpMethod').value;
+      const note=document.getElementById('mpNote').value;
+      if(!amt){toast('Nhập số tiền!','err');return;}
+      const newId=Date.now().toString();
+      // Optimistic update local
+      if(!s.payments)s.payments=[];
+      s.payments.push({id:newId,sid:s.id,name:s.name,date,amount:amt,khoa,method,note});
+      db.payments.push({id:newId,sid:s.id,name:s.name,date,amount:amt,khoa,method,note});
+      closeMdl();rStu();rFin();
+      toast(`✓ Đã ghi nhận ${fmtM(amt)} — ${s.name} Khoá ${khoa}`);
+      // Ghi Sheet ngầm
+      api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:date,so_tien:amt,khoa_so:khoa,hinh_thuc:method,ghi_chu:note}})
+        .catch(e=>{ db.payments=db.payments.filter(x=>x.id!==newId); toast('Lỗi lưu: '+e.message,'err'); });
+    }},{l:'Huỷ',fn:closeMdl}]);
 }
 
 function openEditStu(sid){
