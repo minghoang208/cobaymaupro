@@ -268,7 +268,7 @@ tr:hover td{background:#fafaf9}
     <div class="card-sec">
       <h4>📥 Thu — Học phí nhận được</h4>
       <div class="tw"><table>
-        <thead><tr><th>Ngày</th><th>Học viên</th><th>Khoá</th><th>Số tiền</th><th>Hình thức</th><th>Ghi chú</th></tr></thead>
+        <thead><tr><th>Ngày</th><th>Học viên</th><th>Khoá</th><th>Số tiền</th><th>Hình thức</th><th>Ghi chú</th><th style="width:70px"></th></tr></thead>
         <tbody id="tbThu"></tbody>
       </table></div>
     </div>
@@ -914,6 +914,38 @@ function rLuong(){
 }
 
 // ── Thu tiền Khoá 1 (bé mới chưa học buổi nào) ──────────────
+// ── Sửa thanh toán ───────────────────────────────────────────
+function openEditPayment(pid){
+  const p=db.payments.find(x=>x.id===pid);if(!p)return;
+  showMdl(`Sửa thanh toán — ${p.name}`,`
+    <p style="margin-bottom:12px;color:var(--text2);font-size:13px">Khoá ${p.khoa} · ${fmtM(p.amount)}</p>
+    <div class="fg-row">
+      <div class="fg"><label>Ngày thu</label><input type="date" id="epDate" value="${p.date||''}"></div>
+      <div class="fg"><label>Số tiền (đ)</label><input type="text" id="epAmt" value="${p.amount?Number(p.amount).toLocaleString('en-US'):''}" inputmode="numeric" oninput="fmtInput(this)" data-raw="${p.amount||0}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Hình thức</label>
+        <select id="epMethod" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)">
+          <option${p.method==='Tiền mặt'?' selected':''}>Tiền mặt</option>
+          <option${p.method==='Chuyển khoản'?' selected':''}>Chuyển khoản</option>
+        </select>
+      </div>
+      <div class="fg"><label>Ghi chú</label><input type="text" id="epNote" value="${p.note||''}" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
+    </div>`,
+    [{l:'Lưu',c:'pr',fn:()=>{
+      const newDate=document.getElementById('epDate').value;
+      const newAmt=getInputVal('epAmt');
+      const newMethod=document.getElementById('epMethod').value;
+      const newNote=document.getElementById('epNote').value;
+      // Optimistic update local
+      p.date=newDate; p.amount=newAmt; p.method=newMethod; p.note=newNote;
+      closeMdl(); rFin(); toast(`✓ Đã cập nhật thanh toán ${p.name}`);
+      // Ghi Sheet ngầm
+      api('updatePayment',{payment:{id:pid,ngay:newDate,so_tien:newAmt,hinh_thuc:newMethod,ghi_chu:newNote}})
+        .catch(e=>toast('Lỗi lưu Sheet: '+e.message,'err'));
+    }},{l:'Huỷ',fn:closeMdl}]);
+}
+
 function openPayK1Modal(sid){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
   showMdl(`Thu học phí Khoá 1 — ${s.name}`,`
@@ -1131,7 +1163,8 @@ function rFin(){
     <td style="font-weight:600;color:var(--green)">${fmtM(p.amount)}</td>
     <td><span class="bdg ${p.method==='Chuyển khoản'?'bb':'bk'}">${p.method}</span></td>
     <td style="font-size:12px;color:var(--text2)">${p.note||'—'}</td>
-  </tr>`).join(''):'<tr><td colspan="6" class="load">Chưa có thu trong kỳ này</td></tr>';
+    <td><button class="btn sc" style="padding:3px 8px;font-size:11px" onclick="openEditPayment('${p.id}')">✏ Sửa</button></td>
+  </tr>`).join(''):'<tr><td colspan="7" class="load">Chưa có thu trong kỳ này</td></tr>';
 
   // Bảng chi
   const tbChi=document.getElementById('tbChi');
