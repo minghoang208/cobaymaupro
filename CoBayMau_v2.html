@@ -386,10 +386,13 @@ const statusLabel=(s,showPayBtn=false)=>{
   if(s.status==="pause")return`<span class="bdg ba">Tạm nghỉ</span>`;
   if(s.buoi>=8&&!s.paid){
     const khoaMoi=s.khoa+1;
-    const buoiKM=(s.sessions||[]).filter(ss=>ss.khoa===khoaMoi).length;
+    const buoiKM=(s.sessions||[]).filter(ss=>ss.khoa===khoaMoi&&ss.type!=='trial').length;
     const urgent=buoiKM>=2;
-    if(showPayBtn)return`<div style="display:flex;flex-direction:column;gap:4px"><span class="bdg ${urgent?"br":"ba"}">${urgent?"🚨":"⚠"} Chờ thu tiền K${s.khoa+1}${buoiKM>0?` (B${buoiKM} khoá mới)`:""}</span><button onclick="openPayModal('${s.id}')" style="padding:3px 9px;border:1px solid var(--green-m);border-radius:6px;background:var(--green-l);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">💰 Thu tiền</button></div>`;
-    return`<span class="bdg ${urgent?"br":"ba"}" style="cursor:pointer" onclick="openPayModal('${s.id}')">${urgent?"🚨":"⚠"} Thu K${s.khoa+1}</span>`;
+    const icon=s.deferred?'⏰':(urgent?'🚨':'⚠');
+    const label=s.deferred?`Nợ tiền K${s.khoa+1}`:`Chờ thu K${s.khoa+1}${buoiKM>0?` (B${buoiKM})`:''}`;
+    const cls=s.deferred?'ba':(urgent?'br':'ba');
+    if(showPayBtn)return`<div style="display:flex;flex-direction:column;gap:4px"><span class="bdg ${cls}">${icon} ${label}</span><button onclick="openPayModal('${s.id}')" style="padding:3px 9px;border:1px solid var(--green-m);border-radius:6px;background:var(--green-l);color:var(--green);font-size:11px;font-weight:600;cursor:pointer">💰 Thu tiền</button></div>`;
+    return`<span class="bdg ${cls}" style="cursor:pointer" onclick="openPayModal('${s.id}')">${icon} ${label}</span>`;
   }
   if(s.buoi===7)return`<span class="bdg ba">🔔 Sắp kết khoá</span>`;
   if(s.buoi>=8)return`<span class="bdg bb">K${s.khoa} hoàn thành</span>`;
@@ -563,7 +566,17 @@ function _doAttFlow(sid){
         db.payments.push({id:Date.now().toString(),sid:s.id,name:s.name,date:dateVal,amount:amt,khoa:s.khoa+1,method,note});
         closeMdl();doAtt(sid);
         api('addPayment',{payment:{hoc_vien_id:s.id,ten_be:s.name,ngay:dateVal,so_tien:amt,khoa_so:s.khoa+1,hinh_thuc:method,ghi_chu:note}}).catch(e=>toast('Lỗi ghi học phí: '+e.message,'err'));
-      }},{l:'Huỷ',fn:closeMdl}]);
+      }},
+      {l:'⏰ Thu sau — Điểm danh trước',c:'am',fn:()=>{
+        // Chỉ cho qua, KHÔNG ghi payment, đánh dấu nợ local
+        s.deferred=true; // flag nợ học phí
+        s.paid=true;     // tạm set true để doAtt chạy được
+        closeMdl();doAtt(sid);
+        // Sau doAtt, reset paid về false để badge vẫn hiện "Nợ"
+        setTimeout(()=>{ s.paid=false; s.deferred=true; rAtt(); rStu(); },100);
+        toast(`⏰ Đã điểm danh — nhớ thu học phí K${s.khoa+1} cho ${s.name}`,'ok');
+      }},
+      {l:'Huỷ',fn:closeMdl}]);
     return;
   }
   if(s.buoi===7){
