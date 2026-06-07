@@ -230,37 +230,53 @@ tr:hover td{background:#fafaf9}
         <input type="number" id="finNam" value="2025" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:13px;width:90px;margin-top:4px;background:var(--surface)" oninput="rFin()">
       </div>
       <div style="align-self:flex-end"><span id="finPeriodLabel" style="font-size:13px;font-weight:600;color:var(--text2)"></span></div>
-      <button class="btn pr" style="align-self:flex-end" onclick="openAddExpense()">+ Ghi chi phí</button>
-    </div>
-
-    <div class="stats" id="finStats">
-      <div class="stat"><div class="stat-lb">Doanh thu</div><div class="stat-v" id="fThu" style="color:var(--green)">—</div></div>
-      <div class="stat"><div class="stat-lb">Chi ngoài</div><div class="stat-v" id="fChi" style="color:var(--red)">—</div></div>
-      <div class="stat"><div class="stat-lb">Lương GV</div><div class="stat-v" id="fLuong" style="color:var(--blue)">—</div></div>
-      <div class="stat"><div class="stat-lb">Tổng chi (lương + ngoài)</div><div class="stat-v" id="fTotalChi" style="color:var(--red)">—</div></div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;margin-bottom:14px">
-      <div class="stat"><div class="stat-lb">Thực còn lại (sổ sách)</div><div class="stat-v" id="fNet">—</div></div>
-      <div class="stat"><div class="stat-lb">Tiền mặt (thu - chi)</div><div class="stat-v" id="fCash" style="font-size:18px">—</div></div>
-      <div class="stat"><div class="stat-lb">Chuyển khoản (thu - chi)</div><div class="stat-v" id="fBank" style="font-size:18px">—</div></div>
-      <div class="stat" style="grid-column:span 2">
-        <div class="stat-lb">Tiền thực tế cuối kỳ (nhập tay để lưu)</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
-          <input type="number" id="fThucTe" placeholder="Nhập số tiền thực tế..." style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rs);font-size:13px;background:var(--bg);color:var(--text)">
-          <button class="btn sc" style="padding:5px 10px;font-size:12px;flex-shrink:0" onclick="saveThucTe()">Lưu</button>
-        </div>
-        <div style="margin-top:6px;font-size:12px;color:var(--text2)">
-          Số dư đầu kỳ: <b id="fSoDuDau" style="color:var(--blue)">—</b>
-          &nbsp;·&nbsp; Thực cuối kỳ (tính toán): <b id="fThucCuoi" style="color:var(--text)">—</b>
-        </div>
+      <div style="align-self:flex-end;display:flex;gap:6px">
+        <button class="btn pr" onclick="openAddExpense()">+ Ghi chi phí</button>
+        <button class="btn sc" onclick="openAddExpense('Trả lương GV')" title="Ghi nhận khoản trả lương GV">💸 Trả lương GV</button>
       </div>
     </div>
 
-    <div class="card-sec">
-      <h4>👩‍🏫 Lương giáo viên — chi tiết</h4>
+    <!-- DÒNG TIỀN THỰC TẾ (nhập tay) -->
+    <div class="card-sec" style="margin-bottom:14px;background:var(--blue-l);border:1px solid #b5d4f4">
+      <h4 style="color:var(--blue);margin-bottom:12px">💼 Dòng tiền thực tế</h4>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+        <div class="stat" style="border-color:#b5d4f4">
+          <div class="stat-lb">Số dư đầu kỳ</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+            <input type="text" id="fSoDuDauInput" placeholder="Nhập..." inputmode="numeric" oninput="fmtInput(this);rFin()" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;font-weight:700;color:var(--blue);background:var(--surface)">
+            <button class="btn sc" style="padding:5px 8px;font-size:11px;flex-shrink:0" onclick="saveSoDuDau()">Lưu</button>
+          </div>
+        </div>
+        <div class="stat" style="border-color:#b5d4f4">
+          <div class="stat-lb">+ Thu trong kỳ</div>
+          <div class="stat-v" id="fThu" style="color:var(--green)">—</div>
+        </div>
+        <div class="stat" style="border-color:#b5d4f4">
+          <div class="stat-lb">− Chi trong kỳ (thực ghi)</div>
+          <div class="stat-v" id="fChiThuc" style="color:var(--red)">—</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Gồm cả "Trả lương GV" đã ghi</div>
+        </div>
+        <div class="stat" style="border-color:#b5d4f4;background:var(--surface)">
+          <div class="stat-lb">= Thực còn lại</div>
+          <div class="stat-v" id="fThucConLai">—</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--blue);background:#dbeeff;border-radius:var(--rs);padding:8px 12px;display:flex;gap:16px;flex-wrap:wrap">
+        <span>💳 Tiền mặt (thu−chi): <b id="fCash">—</b></span>
+        <span>🏦 Chuyển khoản (thu−chi): <b id="fBank">—</b></span>
+      </div>
+    </div>
+
+    <!-- THAM KHẢO: Lương GV (chỉ để nhắc nhở, không trừ vào công thức) -->
+    <div class="card-sec" style="margin-bottom:14px;border:1px dashed var(--border);background:var(--gray-l)">
+      <h4 style="color:var(--text2);margin-bottom:4px">📊 Tham khảo — Lương GV tháng này <span style="font-size:11px;font-weight:400;color:var(--text3)">(chưa trừ tự động — ghi nhận khi thực trả)</span></h4>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:13px;color:var(--text2)">Ước tính theo số buổi dạy:</span>
+        <span class="stat-v" id="fLuong" style="font-size:18px;color:var(--text2)">—</span>
+        <button class="btn sc" style="font-size:12px;padding:4px 10px;margin-left:auto" onclick="openAddExpense('Trả lương GV')">💸 Ghi nhận đã trả</button>
+      </div>
       <div class="tw"><table>
-        <thead><tr><th>Giáo viên</th><th style="width:80px">Số buổi</th><th style="width:100px">Lương/buổi</th><th style="width:110px">Lương cơ bản</th><th style="width:90px">Phụ cấp</th><th style="width:80px">Thưởng</th><th style="width:110px">Tổng nhận</th></tr></thead>
+        <thead><tr><th>Giáo viên</th><th style="width:80px">Số buổi</th><th style="width:100px">Lương/buổi</th><th style="width:110px">Lương cơ bản</th><th style="width:90px">Phụ cấp</th><th style="width:80px">Thưởng</th><th style="width:110px">Tổng ước tính</th></tr></thead>
         <tbody id="tbGVFin"></tbody>
       </table></div>
     </div>
@@ -274,9 +290,13 @@ tr:hover td{background:#fafaf9}
     </div>
 
     <div class="card-sec">
-      <h4>📤 Chi — Các khoản chi phí <button class="btn sc" style="font-size:12px;padding:4px 10px;margin-left:8px" onclick="openAddExpense()">+ Thêm</button></h4>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <h4 style="margin:0">📤 Chi — Các khoản chi phí</h4>
+        <button class="btn sc" style="font-size:12px;padding:4px 10px" onclick="openAddExpense()">+ Thêm chi phí</button>
+        <button class="btn sc" style="font-size:12px;padding:4px 10px" onclick="openAddExpense('Trả lương GV')">💸 Trả lương GV</button>
+      </div>
       <div class="tw"><table>
-        <thead><tr><th>Ngày</th><th>Mô tả</th><th>Số tiền</th><th>Hình thức</th><th>Ghi chú</th><th style="width:60px">Xoá</th></tr></thead>
+        <thead><tr><th>Ngày</th><th>Danh mục</th><th>Mô tả</th><th>Số tiền</th><th>Hình thức</th><th>Ghi chú</th><th style="width:60px">Xoá</th></tr></thead>
         <tbody id="tbChi"></tbody>
       </table></div>
     </div>
@@ -425,7 +445,7 @@ async function loadAll(){
     }));
     db.teachers=(data.teachers||[]).map(t=>({id:String(t.id||t.ma_gv),name:t.ten||'',luong:Number(t.luong_buoi)||150000}));
     db.payments=(data.payments||[]).map(p=>({id:String(p.id||''),sid:String(p.hoc_vien_id||''),name:p.ten_be||'',date:normDate(p.ngay||''),amount:Number(p.so_tien)||0,khoa:Number(p.khoa_so)||1,method:p.hinh_thuc||'Tiền mặt',note:p.ghi_chu||''}));
-    db.expenses=(data.expenses||[]).map(e=>({id:String(e.id||''),date:normDate(e.ngay||''),loai:e.loai||'Chi',desc:e.mo_ta||'',amount:Number(e.so_tien)||0,method:e.hinh_thuc||'Tiền mặt',note:e.ghi_chu||''}));
+    db.expenses=(data.expenses||[]).map(e=>({id:String(e.id||''),date:normDate(e.ngay||''),loai:e.loai||'Chi',danh_muc:e.danh_muc||'',desc:e.mo_ta||'',amount:Number(e.so_tien)||0,method:e.hinh_thuc||'Tiền mặt',note:e.ghi_chu||''}));
     db.extras=(data.extras||[]).map(x=>({id:String(x.id||''),gvId:String(x.giao_vien_id||''),thang:Number(x.thang)||0,nam:Number(x.nam)||0,phuCap:Number(x.phu_cap)||0,thuong:Number(x.thuong)||0,luongRieng:Number(x.luong_rieng)||0,note:x.ghi_chu||''}));
     setSt('ok');
     renderAll();
@@ -776,7 +796,7 @@ function confDelStu(sid){
     [{l:'Xoá',c:'dn',fn:async()=>{await api('deleteStudent',{id:sid});db.students=db.students.filter(x=>x.id!==sid);closeMdl();renderAll();toast('Đã xoá');}},'Huỷ']);
 }
 
-function openDetail(sid){ renderDetail(sid); }
+function openDetail(sid){ setTimeout(()=>renderDetail(sid),0); }
 
 function renderDetail(sid){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
@@ -822,7 +842,7 @@ function renderDetail(sid){
 
 function delOneSess(sid, sessionId, buoi, khoa, date){
   const s=db.students.find(x=>x.id===sid);if(!s)return;
-  if(!confirm(`Xác nhận xoá Buổi ${buoi} (${fmt(date)}) của ${s.name}?`))return;
+  // Snapshot để rollback
 
   // ── Optimistic: xoá local ngay lập tức ──
   const snapSessions=[...s.sessions];
@@ -1121,7 +1141,7 @@ function calcLuongGVDetail(filterFn, thang, nam){
 function rFin(){
   const thang=Number(document.getElementById('finThang').value);
   const nam=Number(document.getElementById('finNam').value);
-  const view=document.getElementById('finView').value; // 'month','quarter','year'
+  const view=document.getElementById('finView').value;
 
   let filterFn, periodLabel;
   if(view==='month'){
@@ -1140,70 +1160,64 @@ function rFin(){
   const pays=db.payments.filter(p=>filterFn(p.date));
   const exps=db.expenses.filter(e=>filterFn(e.date));
   const thu=pays.reduce((a,p)=>a+p.amount,0);
-  const chi=exps.reduce((a,e)=>a+e.amount,0);
-  const luongGV=calcLuongGV(filterFn, view==='month'?thang:null, nam);
-  const net=thu-chi-luongGV;
+  // Chi = toàn bộ chi phí thực ghi (bao gồm cả "Trả lương GV" khi đã ghi nhận)
+  const chiThuc=exps.reduce((a,e)=>a+e.amount,0);
+
+  // ── Số dư đầu kỳ (nhập tay, lưu localStorage) ──
+  const soDuKey='sodu_dau_'+thang+'_'+nam+'_'+view;
+  const savedSoDu=localStorage.getItem(soDuKey);
+  const soDuDau=savedSoDu!==null?Number(savedSoDu):null;
+
+  // ── Dòng tiền: Gốc + Thu − Chi = Thực còn lại ──
+  const thucConLai=soDuDau!==null?(soDuDau+thu-chiThuc):null;
+
+  // ── Tiền mặt / Chuyển khoản ──
   const cash=pays.filter(p=>p.method==='Tiền mặt').reduce((a,p)=>a+p.amount,0)
              -exps.filter(e=>e.method==='Tiền mặt').reduce((a,e)=>a+e.amount,0);
   const bank=pays.filter(p=>p.method==='Chuyển khoản').reduce((a,p)=>a+p.amount,0)
              -exps.filter(e=>e.method==='Chuyển khoản').reduce((a,e)=>a+e.amount,0);
 
+  // ── Lương GV (chỉ để tham khảo, không trừ vào công thức) ──
+  const luongGV=calcLuongGV(filterFn, view==='month'?thang:null, nam);
+
   document.getElementById('finPeriodLabel').textContent=periodLabel;
   document.getElementById('fThu').textContent=fmtM(thu);
-  document.getElementById('fChi').textContent=fmtM(chi);
+  document.getElementById('fChiThuc').textContent=fmtM(chiThuc);
   document.getElementById('fLuong').textContent=fmtM(luongGV);
-  // Fix 5: tổng chi phí = chi ngoài + lương GV
-  const totalChi=chi+luongGV;
-  document.getElementById('fTotalChi').textContent=fmtM(totalChi);
-  document.getElementById('fNet').textContent=fmtM(net);
-  document.getElementById('fNet').style.color=net>=0?'var(--green)':'var(--red)';
   document.getElementById('fCash').textContent=fmtM(cash);
   document.getElementById('fBank').textContent=fmtM(bank);
-  // Số dư đầu kỳ = tiền thực tế đã lưu của kỳ trước
-  function getPrevKey(t, n, v){
-    if(v==='month'){
-      const pt=t===1?12:t-1; const pn=t===1?n-1:n;
-      return'thucte_'+pt+'_'+pn+'_month';
-    }
-    if(v==='quarter'){
-      const q=Math.ceil(t/3); const pq=q===1?4:q-1; const pn=q===1?n-1:n;
-      const pm=(pq-1)*3+1; return'thucte_'+pm+'_'+pn+'_quarter';
-    }
-    return'thucte_1_'+(n-1)+'_year';
-  }
-  const prevKey=getPrevKey(thang,nam,view);
-  const prevSaved=localStorage.getItem(prevKey);
-  const soDuDau=prevSaved!==null?Number(prevSaved):null;
 
-  // Tiền thực tế cuối kỳ = số dư đầu kỳ + thu - chi - lương
-  const thucCuoi=soDuDau!==null?(soDuDau+thu-chi-luongGV):null;
-
-  // Cập nhật UI số dư
-  const soDuEl=document.getElementById('fSoDuDau');
-  const thucCuoiEl=document.getElementById('fThucCuoi');
-  if(soDuEl) soDuEl.textContent=soDuDau!==null?fmtM(soDuDau):'(chưa có tháng trước)';
-  if(thucCuoiEl){
-    thucCuoiEl.textContent=thucCuoi!==null?fmtM(thucCuoi):'—';
-    if(thucCuoiEl) thucCuoiEl.style.color=thucCuoi>=0?'var(--green)':'var(--red)';
+  // Số dư đầu kỳ input
+  const soDuInput=document.getElementById('fSoDuDauInput');
+  if(soDuInput&&savedSoDu!==null&&soDuInput.dataset.dirty!=='1'){
+    soDuInput.dataset.raw=String(Number(savedSoDu));
+    soDuInput.value=Number(savedSoDu).toLocaleString('en-US');
   }
 
-  // Ô nhập tiền thực tế (để lưu làm số dư cho tháng sau)
-  const thucTeKey='thucte_'+thang+'_'+nam+'_'+view;
-  const saved=localStorage.getItem(thucTeKey);
-  const thucTeEl=document.getElementById('fThucTe');
-  if(thucTeEl) thucTeEl.value=saved!==null?saved:'';
+  // Thực còn lại
+  const thucEl=document.getElementById('fThucConLai');
+  if(thucEl){
+    if(thucConLai!==null){
+      thucEl.textContent=fmtM(thucConLai);
+      thucEl.style.color=thucConLai>=0?'var(--green)':'var(--red)';
+    } else {
+      thucEl.textContent='← Nhập số dư đầu kỳ';
+      thucEl.style.color='var(--text3)';
+      thucEl.style.fontSize='13px';
+    }
+  }
 
-  // Bảng lương chi tiết từng GV
+  // Bảng lương GV tham khảo
   const gvDetail=calcLuongGVDetail(filterFn, view==='month'?thang:null, nam);
   const tbGVFin=document.getElementById('tbGVFin');
   tbGVFin.innerHTML=gvDetail.length?gvDetail.map(g=>`<tr>
     <td style="font-weight:500">${g.name}</td>
-    <td style="text-align:center;color:var(--blue);font-weight:600">${g.buoi} buổi</td>
+    <td style="text-align:center;color:var(--blue);font-weight:600;cursor:pointer;text-decoration:underline" onclick="openGVDetail('${db.teachers.find(t=>t.name===g.name)?.id}',${thang},${nam})">${g.buoi} buổi</td>
     <td style="font-size:12px;color:var(--text2)">${fmtM(g.luongBuoi)}</td>
     <td>${fmtM(g.buoi*g.luongBuoi)}</td>
     <td style="color:var(--blue)">${g.phuCap?fmtM(g.phuCap):'—'}</td>
     <td style="color:var(--green)">${g.thuong?fmtM(g.thuong):'—'}</td>
-    <td style="font-weight:700;color:var(--green)">${fmtM(g.total)}</td>
+    <td style="font-weight:700;color:var(--text2)">${fmtM(g.total)}</td>
   </tr>`).join(''):'<tr><td colspan="7" class="load">Không có buổi dạy trong kỳ này</td></tr>';
 
   // Bảng thu
@@ -1218,52 +1232,83 @@ function rFin(){
     <td><button class="btn sc" style="padding:3px 8px;font-size:11px" onclick="openEditPayment('${p.id}')">✏ Sửa</button></td>
   </tr>`).join(''):'<tr><td colspan="7" class="load">Chưa có thu trong kỳ này</td></tr>';
 
-  // Bảng chi
+  // Bảng chi — hiện danh mục + badge màu cho Trả lương
   const tbChi=document.getElementById('tbChi');
-  tbChi.innerHTML=exps.length?exps.map(e=>`<tr>
-    <td style="font-size:12px">${fmt(e.date)}</td>
-    <td style="font-weight:500">${e.desc}</td>
-    <td style="font-weight:600;color:var(--red)">${fmtM(e.amount)}</td>
-    <td><span class="bdg ${e.method==='Chuyển khoản'?'bb':'bk'}">${e.method}</span></td>
-    <td style="font-size:12px;color:var(--text2)">${e.note||'—'}</td>
-    <td><button class="btn dn" style="padding:3px 7px;font-size:11px" onclick="delExp('${e.id}')">✕</button></td>
-  </tr>`).join(''):'<tr><td colspan="6" class="load">Chưa có chi phí ghi nhận</td></tr>';
+  tbChi.innerHTML=exps.length?exps.map(e=>{
+    const isLuong=e.danh_muc==='Trả lương GV'||e.loai==='Lương';
+    const catBadge=isLuong
+      ?`<span class="bdg ba" style="font-size:11px">💸 Trả lương GV</span>`
+      :`<span class="bdg bk" style="font-size:11px">${e.danh_muc||'Chi phí'}</span>`;
+    return`<tr>
+      <td style="font-size:12px">${fmt(e.date)}</td>
+      <td>${catBadge}</td>
+      <td style="font-weight:500">${e.desc}</td>
+      <td style="font-weight:600;color:var(--red)">${fmtM(e.amount)}</td>
+      <td><span class="bdg ${e.method==='Chuyển khoản'?'bb':'bk'}">${e.method}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${e.note||'—'}</td>
+      <td><button class="btn dn" style="padding:3px 7px;font-size:11px" onclick="delExp('${e.id}')">✕</button></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="7" class="load">Chưa có chi phí ghi nhận</td></tr>';
 }
 
-function openAddExpense(){
+const CHI_CATS=['Trả lương GV','Mua vật tư / dụng cụ','Thuê mặt bằng','Điện / nước / internet','Marketing / quảng cáo','Chi phí khác'];
+function openAddExpense(prefillCat=''){
+  const catOpts=CHI_CATS.map(c=>`<option value="${c}"${c===prefillCat?' selected':''}>${c}</option>`).join('');
+  // Nếu là Trả lương GV thì gợi ý tên GV vào mô tả
+  const gvSuggest=prefillCat==='Trả lương GV'
+    ?`<div id="gvSuggestWrap" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${db.teachers.map(t=>`<button type="button" onclick="document.getElementById('eDe').value='Lương ${t.name}'" style="padding:3px 9px;border:1px solid var(--border);border-radius:999px;font-size:11px;background:var(--bg);cursor:pointer">${t.name}</button>`).join('')}</div>`
+    :'';
   showMdl('Ghi chi phí',`
     <div class="fg-row">
       <div class="fg"><label>Ngày</label><input type="date" id="eD" value="${todayS()}"></div>
       <div class="fg"><label>Số tiền (đ)</label><input type="text" id="eA" placeholder="500,000" inputmode="numeric" oninput="fmtInput(this)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--text);background:var(--bg)"></div>
     </div>
-    <div class="fg"><label>Mô tả chi phí</label><input type="text" id="eDe" placeholder="Vd: Mua cọ vẽ, tiền thuê mặt bằng..."></div>
+    <div class="fg"><label>Danh mục</label>
+      <select id="eCat" onchange="onChangeCat(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:13px;background:var(--bg)">${catOpts}</select>
+    </div>
+    <div class="fg"><label>Mô tả</label><input type="text" id="eDe" placeholder="Vd: Lương Cô Khánh An tháng 5...">
+    ${gvSuggest}</div>
     <div class="fg-row">
       <div class="fg"><label>Hình thức</label><select id="eMt"><option>Tiền mặt</option><option>Chuyển khoản</option></select></div>
       <div class="fg"><label>Ghi chú</label><input type="text" id="eNt" placeholder="Tuỳ chọn..."></div>
     </div>`,
     [{l:'Ghi nhận',c:'pr',fn:()=>{
-      const exp={ngay:document.getElementById('eD').value,so_tien:getInputVal('eA'),mo_ta:document.getElementById('eDe').value,hinh_thuc:document.getElementById('eMt').value,loai:'Chi',ghi_chu:document.getElementById('eNt').value};
-      if(!exp.so_tien||!exp.mo_ta){toast('Nhập đủ số tiền và mô tả!','err');return;}
+      const cat=document.getElementById('eCat').value;
+      const desc=document.getElementById('eDe').value||cat;
+      const exp={ngay:document.getElementById('eD').value,so_tien:getInputVal('eA'),mo_ta:desc,hinh_thuc:document.getElementById('eMt').value,loai:cat==='Trả lương GV'?'Lương':'Chi',ghi_chu:document.getElementById('eNt').value};
+      if(!exp.so_tien){toast('Nhập số tiền!','err');return;}
       const newId=Date.now().toString();
-      // Optimistic: cập nhật local ngay
-      db.expenses.push({id:newId,date:exp.ngay,loai:'Chi',desc:exp.mo_ta,amount:exp.so_tien,method:exp.hinh_thuc,note:exp.ghi_chu});
-      closeMdl();rFin();toast('Đã ghi chi phí '+fmtM(exp.so_tien));
-      // Ghi Sheet ngầm
-      api('addExpense',{expense:exp}).catch(e=>{
+      db.expenses.push({id:newId,date:exp.ngay,loai:exp.loai,danh_muc:cat,desc,amount:exp.so_tien,method:exp.hinh_thuc,note:exp.ghi_chu});
+      closeMdl();rFin();toast('Đã ghi '+fmtM(exp.so_tien)+' — '+cat);
+      api('addExpense',{expense:{...exp,danh_muc:cat}}).catch(e=>{
         db.expenses=db.expenses.filter(x=>x.id!==newId);
         rFin();toast('Lỗi lưu Sheet: '+e.message,'err');
       });
     }},{l:'Huỷ',fn:closeMdl}]);
 }
+function onChangeCat(val){
+  const wrap=document.getElementById('gvSuggestWrap');
+  if(val==='Trả lương GV'){
+    if(!wrap){
+      const deDe=document.getElementById('eDe');
+      const div=document.createElement('div');div.id='gvSuggestWrap';div.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px';
+      db.teachers.forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t.name;b.style.cssText='padding:3px 9px;border:1px solid var(--border);border-radius:999px;font-size:11px;background:var(--bg);cursor:pointer';b.onclick=()=>deDe.value='Lương '+t.name;div.appendChild(b);});
+      deDe.parentNode.appendChild(div);
+    } else wrap.style.display='flex';
+  } else if(wrap) wrap.style.display='none';
+}
 
-function saveThucTe(){
+function saveSoDuDau(){
   const thang=Number(document.getElementById('finThang').value);
   const nam=Number(document.getElementById('finNam').value);
   const view=document.getElementById('finView').value;
-  const val=document.getElementById('fThucTe').value;
-  const key='thucte_'+thang+'_'+nam+'_'+view;
+  const val=getInputVal('fSoDuDauInput');
+  const key='sodu_dau_'+thang+'_'+nam+'_'+view;
   localStorage.setItem(key,val);
-  rFin();toast('Đã lưu tiền thực tế');
+  const el=document.getElementById('fSoDuDauInput');
+  if(el)el.dataset.dirty='0';
+  rFin();
+  toast(`Đã lưu số dư đầu kỳ: ${fmtM(val)}`);
 }
 
 async function delExp(id){
