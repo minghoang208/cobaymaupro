@@ -720,6 +720,11 @@ function openManualPay(sid){
       const note=document.getElementById('mpNote').value;
       if(!amt){toast('Nhập số tiền!','err');return;}
       const newId=Date.now().toString();
+      // Nếu thu cho khoá hiện tại hoặc kế tiếp → đánh dấu paid=true, không hỏi lại khi điểm danh
+      if(khoa>=s.khoa){
+        s.paid=true;
+        api('updateStudent',{student:{id:s.id,ten:s.name,khoa_hien_tai:s.khoa,buoi_hien_tai:s.buoi,da_dong_tien:true,ngay_bat_dau:s.startDate,hoc_phi_khoa:s.hocPhi,trang_thai:s.status}}).catch(()=>{});
+      }
       // Optimistic update local
       if(!s.payments)s.payments=[];
       s.payments.push({id:newId,sid:s.id,name:s.name,date,amount:amt,khoa,method,note});
